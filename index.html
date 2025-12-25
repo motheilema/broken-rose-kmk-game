@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<title>Kill Marry Kiss</title>
+
+<style>
+  body {
+  margin: 0;
+  padding: 40px;
+  min-height: 100vh;
+
+  background-image: url("images/sfondo.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+
+  color: #f2f2f2;
+  font-family: Georgia, serif;
+}
+
+#game {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.card {
+  width: 200px;
+  background: rgba(20,20,20,0.85);
+  border: 1px solid #555;
+  border-radius: 16px;
+  padding: 14px;
+  text-align: center;
+  position: relative;
+  backdrop-filter: blur(6px);
+  transition: transform 0.3s, opacity 0.5s;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+}
+
+.card img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+button {
+  background: #222;
+  color: #eee;
+  border: 1px solid #555;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
+}
+
+button:active {
+  transform: scale(0.92);
+}
+
+button.selected {
+  background: #ff6b81;
+  border-color: #ff6b81;
+  color: #111;
+  box-shadow: 0 0 10px rgba(255,107,129,0.6);
+}
+
+button.kill {
+  background: #3a0000;
+  border-color: #aa0000;
+}
+
+button.kill:hover {
+  background: #550000;
+}
+
+.dead {
+  opacity: 0;
+  transform: scale(0.6) rotate(-10deg);
+}
+
+.blood {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, red 20%, transparent 70%);
+  pointer-events: none;
+  border-radius: 16px;
+}
+
+.icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  pointer-events: none;
+  animation: pop 0.5s ease;
+}
+
+@keyframes pop {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+#end-screen {
+  text-align: center;
+  margin-top: 50px;
+}
+
+#greeting {
+  color: #ff6b81;
+  margin-top: 20px;
+  font-size: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="game"></div>
+<div id="end-screen" style="display:none;"></div>
+
+<script>
+const characters = [
+  { name: "riku", image: "images/riku.jpg" },
+  { name: "sungmin", image: "images/sungmin.jpg" },
+  { name: "aiden", image: "images/aiden.jpg" },
+  { name: "caterina", image: "images/caterina.jpg" },
+  { name: "beatrice", image: "images/beatrice.jpg" },
+  { name: "elisha", image: "images/elisha.jpg" },
+  { name: "ermes", image: "images/ermes.jpg" },
+  { name: "kai", image: "images/kai.jpg" },
+  { name: "mei", image: "images/mei.jpg" },
+  { name: "michelangelo", image: "images/michelangelo.jpg" },
+  { name: "valerio", image: "images/valerio.jpg" },
+  { name: "yuli", image: "images/yuli.jpg" },
+  { name: "kyojuro", image: "images/kyojuro.jpg" },
+  { name: "manuel", image: "images/manuel.jpg" },
+  { name: "simone", image: "images/simone.jpg" },
+  { name: "minhyuk", image: "images/minhyuk.jpg" },
+  { name: "gabriele", image: "images/gabriele.jpg" },
+  { name: "paride", image: "images/paride.jpg" },
+  { name: "orion", image: "images/orion.jpg" },
+  { name: "sebastiano raf", image: "images/sebastiano_raf.jpg" },
+  { name: "yuze", image: "images/yuze.jpg" },
+  { name: "jiwon", image: "images/jiwon.jpg" },
+  { name: "nana", image: "images/nana.jpg" },
+  { name: "atlas", image: "images/atlas.jpg" },
+  { name: "enea", image: "images/enea.jpg" },
+  { name: "haru", image: "images/haru.jpg" },
+  { name: "nero", image: "images/nero.jpg" },
+  { name: "shinichi", image: "images/shinichi.jpg" },
+  { name: "tancredi", image: "images/tancredi.jpg" },
+  { name: "zeno", image: "images/zeno.jpg" },
+  { name: "denji", image: "images/denji.jpg" },
+  { name: "juzo", image: "images/juzo.jpg" },
+  { name: "elia", image: "images/elia.jpg" },
+  { name: "icaro", image: "images/icaro.jpg" },
+  { name: "lian", image: "images/lian.jpg" },
+  { name: "paolo", image: "images/paolo.jpg" },
+  { name: "riccardo", image: "images/riccardo.jpg" },
+  { name: "sibilla", image: "images/sibilla.jpg" },
+  { name: "haruto", image: "images/haruto.jpg" },
+  { name: "risa", image: "images/risa.jpg" }
+];
+let pool = [...characters];
+let roundState = { kill: null, kiss: null, marry: null };
+
+function drawRound() {
+  const game = document.getElementById("game");
+  game.innerHTML = "";
+  roundState = { kill: null, kiss: null, marry: null };
+
+  if (pool.length === 2) {
+    drawFinalChoice();
+    return;
+  }
+
+  const trio = [...pool].sort(() => 0.5 - Math.random()).slice(0, 3);
+
+  trio.forEach(char => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <img src="${char.image}">
+      <strong>${char.name}</strong>
+      <div class="buttons">
+        <button class="kill">Kill</button>
+        <button>Kiss</button>
+        <button>Marry</button>
+      </div>
+    `;
+
+    const [killBtn, kissBtn, marryBtn] = card.querySelectorAll("button");
+
+    killBtn.onclick = () => {
+      if (roundState.kill) return;
+      roundState.kill = char;
+
+      const blood = document.createElement("div");
+      blood.className = "blood";
+      card.appendChild(blood);
+      card.classList.add("dead");
+
+      checkRoundEnd();
+    };
+
+    kissBtn.onclick = () => {
+      if (roundState.kiss) return;
+      roundState.kiss = char;
+      kissBtn.classList.add("selected");
+      showIcon(card, "💋");
+      checkRoundEnd();
+    };
+
+    marryBtn.onclick = () => {
+      if (roundState.marry) return;
+      roundState.marry = char;
+      marryBtn.classList.add("selected");
+      showIcon(card, "💍");
+      checkRoundEnd();
+    };
+
+    game.appendChild(card);
+  });
+}
+
+function checkRoundEnd() {
+  if (roundState.kill && roundState.kiss && roundState.marry) {
+    setTimeout(() => {
+      pool = pool.filter(c => c !== roundState.kill);
+      drawRound();
+    }, 700);
+  }
+}
+
+function showIcon(card, symbol) {
+  const icon = document.createElement("div");
+  icon.className = "icon";
+  icon.textContent = symbol;
+  card.appendChild(icon);
+  setTimeout(() => icon.remove(), 600);
+}
+
+function drawFinalChoice() {
+  const game = document.getElementById("game");
+  game.innerHTML = "";
+
+  pool.forEach(char => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <img src="${char.image}">
+      <strong>${char.name}</strong>
+      <div class="buttons">
+        <button>Kiss</button>
+        <button>Marry</button>
+      </div>
+    `;
+
+    card.querySelector("button:nth-child(1)").onclick = () =>
+      showEnd(char, pool.find(c => c !== char));
+
+    card.querySelector("button:nth-child(2)").onclick = () =>
+      showEnd(pool.find(c => c !== char), char);
+
+    game.appendChild(card);
+  });
+}
+
+function restartGame() {
+  pool = [...characters];
+  document.getElementById("end-screen").style.display = "none";
+  document.getElementById("game").style.display = "flex";
+  drawRound();
+}
+
+function showEnd(kiss, marry) {
+  document.getElementById("game").style.display = "none";
+  const end = document.getElementById("end-screen");
+  end.style.display = "block";
+
+  end.innerHTML = `
+    <h2>Fine Gioco 💖</h2>
+    <p><strong>Marry:</strong> ${marry.name}</p>
+    <p><strong>Kiss:</strong> ${kiss.name}</p>
+    <button onclick="restartGame()">🔁 Restart</button>
+    <p id="greeting">buon natale, da moth ❤️</p>
+  `;
+}
+
+drawRound();
+</script>
+
+</body>
+</html>
